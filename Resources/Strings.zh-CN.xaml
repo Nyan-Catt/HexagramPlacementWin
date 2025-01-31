@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <x:String x:Key="AppTitle">算卦排盘整合</x:String>
+    <x:String x:Key="SmallSixRenPageHeader">小六壬</x:String>
+    <x:String x:Key="WelcomeMessage">欢迎来到小六壬页面</x:String>
+    <x:String x:Key="SettingsPageHeader">设置</x:String>
+    <x:String x:Key="AppearanceSectionHeader">外观</x:String>
+    <x:String x:Key="AppThemeHeader">应用主题</x:String>
+    <x:String x:Key="AppThemeDescription">选择应用的主题</x:String>
+    <x:String x:Key="AppThemeDefault">使用系统设置</x:String>
+    <x:String x:Key="AppThemeLight">浅色</x:String>
+    <x:String x:Key="AppThemeDark">深色</x:String>
+    <x:String x:Key="AboutSectionHeader">关于</x:String>
+    <x:String x:Key="License">© Nyan-Catt. GPL-3.0许可</x:String>
+    <x:String x:Key="VersionText">1.0</x:String>
+    <x:String x:Key="DeveloperGitHub">开发者 GitHub</x:String>
+    <x:String x:Key="GitHubRepository">项目 GitHub</x:String>
+    <x:String x:Key="MobileVersion">移动端版本</x:String>
+</ResourceDictionary>

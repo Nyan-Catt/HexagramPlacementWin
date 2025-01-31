@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="9338f2c6-e695-4dbd-9790-500184a6e17e"
+    Publisher="CN=nyan_"
+    Version="1.0.0.0" />
+
+  <mp:PhoneIdentity PhoneProductId="9338f2c6-e695-4dbd-9790-500184a6e17e" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+  <Properties>
+    <DisplayName>HexagramPlacementWin</DisplayName>
+    <PublisherDisplayName>nyan_</PublisherDisplayName>
+    <Logo>Assets\Logo\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="HexagramPlacementWin"
+        Description="HexagramPlacementWin"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Logo\Square150x150Logo.png"
+        Square44x44Logo="Assets\Logo\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Logo\Wide310x150Logo.png"  Square71x71Logo="Assets\Logo\SmallTile.png" Square310x310Logo="Assets\Logo\LargeTile.png"/>
+        <uap:SplashScreen Image="Assets\Logo\SplashScreen.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

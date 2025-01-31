@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "HexagramPlacementWin (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "HexagramPlacementWin (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
