@@ -13,7 +13,7 @@
     <x:String x:Key="AppThemeLight">浅色</x:String>
     <x:String x:Key="AppThemeDark">深色</x:String>
     <x:String x:Key="AboutSectionHeader">关于</x:String>
-    <x:String x:Key="License">© Nyan-Catt. GPL-3.0许可</x:String>
+    <x:String x:Key="License">© Nyan-Catt. AGPL-3.0许可</x:String>
     <x:String x:Key="VersionText">1.0</x:String>
     <x:String x:Key="DeveloperGitHub">开发者 GitHub</x:String>
     <x:String x:Key="GitHubRepository">项目 GitHub</x:String>

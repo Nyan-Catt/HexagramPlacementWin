@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -13,146 +14,216 @@ namespace HexagramPlacementWin
 {
     public sealed partial class MainWindow : Window
     {
-        private readonly AppWindow m_AppWindow;
-        public static MainWindow? CurrentWindow { get; private set; }
+        #region Fields
+        // 页面映射字典，用于存储页面标签和页面类型的映射关系
+        private readonly Dictionary<string, Type> _pageMap = new()
+        {
+            { "HexagramPlacementWin.Pages.SmallSixRen", typeof(Pages.SmallSixRen) }
+        };
 
+        // Win32窗口互操作对象，用于与原生窗口交互
+        private WindowInteropHelper _windowInterop = null!;
+        #endregion
+
+        #region Properties
+        // 当前窗口的静态属性
+        public static MainWindow CurrentWindow { get; private set; } = null!;
+        #endregion
+
+        #region Initialization
+        // 构造函数，初始化窗口并调用核心初始化方法
         public MainWindow()
         {
-            this.InitializeComponent();
-            SetCurrentWindow(this);
-
-            m_AppWindow = GetAppWindowForCurrentWindow();
-
-            // 设置云母背景
-            SystemBackdrop = new MicaBackdrop();
-            // 自定义标题栏
-            ExtendsContentIntoTitleBar = true;
-            SetTitleBar(AppTitleBar);
-            // 标题
-            m_AppWindow.Title = Application.Current.Resources["AppTitle"] as string;
-
-            // 明确订阅事件
-            NavView.SelectionChanged += NavView_SelectionChanged;
-            NavView.Loaded += NavView_Loaded;
-
-            this.Closed += MainWindow_Closed;
+            InitializeComponent();
+            InitializeWindowCore();
         }
 
+        // 核心初始化方法，设置视觉效果、导航和窗口互操作
+        private void InitializeWindowCore()
+        {
+            CurrentWindow = this;  // 设置当前窗口实例
+            InitializeVisualSettings();  // 初始化视觉设置
+            InitializeNavigation();  // 初始化导航
+            InitializeWindowInterop();  // 初始化窗口互操作
+        }
+
+        // 初始化视觉设置，包括设置窗口背景和标题栏等
+        private void InitializeVisualSettings()
+        {
+            SystemBackdrop = new MicaBackdrop();  // 设置背景为Mica效果
+            ExtendsContentIntoTitleBar = true;  // 扩展内容到标题栏
+            SetTitleBar(AppTitleBar);  // 设置自定义标题栏
+            Title = Application.Current.Resources["AppTitle"] as string;  // 设置应用标题
+        }
+
+        // 初始化导航设置，包括菜单项的初始化和关闭事件处理
+        private void InitializeNavigation()
+        {
+            NavView.Loaded += (s, e) =>
+            {
+                // 选中导航视图的第一个项
+                NavView.SelectedItem = NavView.MenuItems.FirstOrDefault();
+
+                // 设置“设置”项的内容
+                if (NavView.SettingsItem is NavigationViewItem settingsItem)
+                {
+                    settingsItem.Content = "设置";
+                }
+            };
+            Closed += MainWindow_Closed;  // 窗口关闭时处理相关清理工作
+        }
+
+        // 初始化窗口互操作，设置窗口句柄和尺寸
+        private void InitializeWindowInterop()
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);  // 获取窗口句柄
+            _windowInterop = new WindowInteropHelper(hwnd, 1400, 800);  // 初始化窗口互操作对象，设置最小尺寸
+        }
+        #endregion
+
+        #region Event Handlers
+        // 处理窗口关闭事件，释放互操作资源
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
-            // 取消事件订阅
-            NavView.SelectionChanged -= NavView_SelectionChanged;
-            NavView.Loaded -= NavView_Loaded;
+            _windowInterop?.Dispose();  // 释放窗口互操作资源
+            Closed -= MainWindow_Closed;  // 移除关闭事件处理
         }
 
-        private void NavView_Loaded(object sender, RoutedEventArgs e)
-        {
-            SetSettingsItemContent();
-            NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First();
-        }
-
-        public AppWindow GetAppWindowForCurrentWindow()
-        {
-            IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            WindowId myWndId = Win32Interop.GetWindowIdFromWindow(hWnd);
-            return AppWindow.GetFromWindowId(myWndId);
-        }
-
+        // 处理导航视图项选择变化事件
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            var transitionInfo = new DrillInNavigationTransitionInfo();
+            var transition = new DrillInNavigationTransitionInfo();  // 导航过渡动画
 
             if (args.IsSettingsSelected)
             {
-                ContentFrame.Navigate(typeof(Pages.Settings), null, transitionInfo);
+                // 如果选择了设置项，则导航到设置页面
+                ContentFrame.Navigate(typeof(Pages.Settings), null, transition);
             }
-            else if (args.SelectedItemContainer != null && args.SelectedItemContainer.Tag != null)
+            else if (args.SelectedItemContainer?.Tag is string tag)
             {
-                string? tag = args.SelectedItemContainer.Tag?.ToString();
-                switch (tag)
-                {
-                    case "HexagramPlacementWin.Pages.SmallSixRen":
-                        ContentFrame.Navigate(typeof(Pages.SmallSixRen), null, transitionInfo);
-                        break;
-                }
+                // 根据选择的标签进行页面导航
+                NavigateByTag(tag, transition);
             }
         }
 
-        private void SetSettingsItemContent()
-        {
-            if (NavView.SettingsItem is NavigationViewItem settingsItem)
-            {
-                settingsItem.Content = "设置";
-            }
-        }
-
+        // 处理页面导航完成事件
         private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
         {
-            NavView.IsBackEnabled = ContentFrame.CanGoBack;
-
-            if (ContentFrame.SourcePageType == typeof(Pages.Settings))
-            {
-                NavView.SelectedItem = NavView.SettingsItem;
-            }
-            else
-            {
-                NavView.SelectedItem = NavView.MenuItems
-                    .OfType<NavigationViewItem>()
-                    .FirstOrDefault(n => n.Tag?.ToString() == ContentFrame.SourcePageType.FullName);
-            }
+            // 根据当前页面设置导航视图选中的项
+            NavView.SelectedItem = ContentFrame.SourcePageType == typeof(Pages.Settings)
+                ? NavView.SettingsItem
+                : NavView.MenuItems.FirstOrDefault(n =>
+                    (n as NavigationViewItem)?.Tag?.ToString() == e.SourcePageType.FullName)!;
         }
+        #endregion
 
-        public static void SetCurrentWindow(MainWindow window)
+        #region Navigation Methods
+        // 根据标签进行页面导航
+        private void NavigateByTag(string tag, NavigationTransitionInfo transitionInfo)
         {
-            CurrentWindow = window;
-        }
-    }
-
-    // 使用 P/Invoke 而非 LibraryImport 来实现窗口最小尺寸设置
-    internal static class WindowNativeMethods
-    {
-        public const int WM_GETMINMAXINFO = 0x0024;
-
-        // P/Invoke 调用 SetWindowPos（不使用不安全代码）
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-        // 定义结构体 POINT 和 MINMAXINFO
-        [StructLayout(LayoutKind.Sequential)]
-        public struct POINT
-        {
-            public int X;
-            public int Y;
-
-            public POINT(int x, int y)
+            // 根据标签查找对应的页面类型，并进行导航
+            if (_pageMap.TryGetValue(tag, out Type? pageType))
             {
-                X = x;
-                Y = y;
+                ContentFrame.Navigate(pageType, null, transitionInfo);
             }
         }
+        #endregion
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MINMAXINFO
+        #region Win32 Interop Helper
+        // 用于处理Win32窗口互操作的辅助类
+        private sealed class WindowInteropHelper : IDisposable
         {
-            public POINT ptReserved;
-            public POINT ptMaxSize;
-            public POINT ptMaxPosition;
-            public POINT ptMinTrackSize;
-            public POINT ptMaxTrackSize;
+            private const int WM_GETMINMAXINFO = 0x0024;  // 获取最小/最大窗口信息消息
+            private const int GWLP_WNDPROC = -4;  // 获取窗口过程消息
+
+            private readonly IntPtr _hwnd;  // 窗口句柄
+            private readonly IntPtr _originalWndProc;  // 原始窗口过程
+            private readonly IntPtr _newWndProcPtr;  // 新的窗口过程指针
+            private readonly WndProc _newWndProc;  // 新的窗口过程委托
+
+            // 结构体，用于表示窗口大小和位置等信息
+            [StructLayout(LayoutKind.Sequential)]
+            private struct POINT
+            {
+                public int X;
+                public int Y;
+                public POINT(int x, int y) => (X, Y) = (x, y);
+            }
+
+            // 结构体，用于表示最小/最大信息
+            [StructLayout(LayoutKind.Sequential)]
+            private struct MINMAXINFO
+            {
+                public POINT ptReserved;
+                public POINT ptMaxSize;
+                public POINT ptMaxPosition;
+                public POINT ptMinTrackSize;
+                public POINT ptMaxTrackSize;
+            }
+
+            // 窗口过程委托，用于处理窗口消息
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+            private delegate IntPtr WndProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
+            // 构造函数，初始化窗口互操作
+            public WindowInteropHelper(IntPtr hwnd, int minWidth, int minHeight)
+            {
+                _hwnd = hwnd;
+                _newWndProc = NewWindowProc;
+                _newWndProcPtr = Marshal.GetFunctionPointerForDelegate(_newWndProc);
+                _originalWndProc = SetWindowLongPtr(hwnd, GWLP_WNDPROC, _newWndProcPtr);
+
+                // 设置最小窗口尺寸
+                MinWidth = minWidth;
+                MinHeight = minHeight;
+            }
+
+            public int MinWidth { get; }
+            public int MinHeight { get; }
+
+            // 新的窗口过程方法，用于处理窗口消息
+            private IntPtr NewWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam)
+            {
+                if (uMsg == WM_GETMINMAXINFO)
+                {
+                    // 修改窗口的最小尺寸信息
+                    var info = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+                    info.ptMinTrackSize = new POINT(MinWidth, MinHeight);
+                    Marshal.StructureToPtr(info, lParam, true);
+                }
+                return CallWindowProc(_originalWndProc, hWnd, uMsg, wParam, lParam);
+            }
+
+            // 释放窗口互操作资源
+            public void Dispose()
+            {
+                SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _originalWndProc);  // 恢复原始窗口过程
+                GC.SuppressFinalize(this);
+            }
+
+            // Win32 API，用于设置窗口过程
+            [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+            private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+            // Win32 API，用于调用窗口过程
+            [DllImport("user32.dll")]
+            private static extern IntPtr CallWindowProc(
+                IntPtr lpPrevWndFunc,
+                IntPtr hWnd,
+                uint Msg,
+                IntPtr wParam,
+                IntPtr lParam);
         }
+        #endregion
 
-        // 定义常量，用于设置窗口位置和大小
-        public const uint SWP_NOMOVE = 0x0002;
-        public const uint SWP_NOSIZE = 0x0001;
-        public const uint SWP_NOZORDER = 0x0004;
-    }
-
-    internal static class WindowNativeHelper
-    {
-        // 设置窗口的最小尺寸
-        public static void AdjustMinSize(ref WindowNativeMethods.MINMAXINFO minMaxInfo)
+        #region Helper Methods
+        // 获取当前窗口的应用窗口对象
+        public AppWindow GetAppWindowForCurrentWindow()
         {
-            minMaxInfo.ptMinTrackSize = new WindowNativeMethods.POINT(1200, 800);
+            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);  // 获取窗口句柄
+            var myWndId = Win32Interop.GetWindowIdFromWindow(hWnd);  // 获取窗口ID
+            return AppWindow.GetFromWindowId(myWndId);  // 根据窗口ID获取应用窗口对象
         }
+        #endregion
     }
 }

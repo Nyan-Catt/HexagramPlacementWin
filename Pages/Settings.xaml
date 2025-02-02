@@ -1,15 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Page
-    x:Class="HexagramPlacementWin.Pages.Settings"
+<Page x:Class="HexagramPlacementWin.Pages.Settings"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HexagramPlacementWin.Pages"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:win="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!--  These styles can be referenced to create a consistent SettingsPage layout  -->
+
+        <!--  Spacing between cards  -->
+        <x:Double x:Key="SettingsCardSpacing">4</x:Double>
+
+        <!--  Style (inc. the correct spacing) of a section header  -->
+        <Style x:Key="SettingsSectionHeaderTextBlockStyle"
+               BasedOn="{StaticResource BodyStrongTextBlockStyle}"
+               TargetType="TextBlock">
+            <Style.Setters>
+                <Setter Property="Margin" Value="1,30,0,6" />
+            </Style.Setters>
+        </Style>
+    </Page.Resources>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ScrollViewer
+            x:Name="contentSV"
+            Grid.Row="1"
+            Padding="36,0,36,0"
+            IsTabStop="False"
+            UseSystemFocusVisuals="False"
+            VerticalScrollBarVisibility="Auto"
+            VerticalScrollMode="Auto">
+            <StackPanel MaxWidth="1600"
+                        HorizontalAlignment="Stretch"
+                        Spacing="{ThemeResource SettingsCardSpacing}">
 
+                <TextBlock Text="{ThemeResource AppearanceSectionHeader}" Style="{ThemeResource SettingsSectionHeaderTextBlockStyle}"/>
+                <controls:SettingsCard Description="{ThemeResource AppThemeDescription}" Header="{ThemeResource AppThemeHeader}">
+                    <controls:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE790;" />
+                    </controls:SettingsCard.HeaderIcon>
+                    <ComboBox x:Name="ThemeMode">
+                        <ComboBoxItem Content="{ThemeResource AppThemeDefault}" Tag="Default"/>
+                        <ComboBoxItem Content="{ThemeResource AppThemeLight}" Tag="Light"/>
+                        <ComboBoxItem Content="{ThemeResource AppThemeDark}" Tag="Dark"/>
+                    </ComboBox>
+                </controls:SettingsCard>
+
+                <!--  About  -->
+                <TextBlock Text="{ThemeResource AboutSectionHeader}" Style="{ThemeResource SettingsSectionHeaderTextBlockStyle}"/>
+                <controls:SettingsExpander Description="{ThemeResource License}" Header="{ThemeResource AppTitle}" HeaderIcon="{ui:BitmapIcon Source=ms-appx:///Assets/Logo/StoreLogo.png}">
+                    <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            IsTextSelectionEnabled="True"
+                            Text="{ThemeResource VersionText}" />
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard
+                            HorizontalContentAlignment="Left"
+                            ContentAlignment="Vertical">
+                            <StackPanel Margin="-12,0,0,0" Orientation="Vertical">
+                                <HyperlinkButton Content="{ThemeResource DeveloperGitHub}" NavigateUri="https://github.com/Nyan-Catt" />
+                                <HyperlinkButton Content="{ThemeResource GitHubRepository}" NavigateUri="https://github.com/Nyan-Catt/HexagramPlacementWin" />
+                                <HyperlinkButton Content="{ThemeResource MobileVersion}" NavigateUri="https://github.com/Nyan-Catt/Hexagram_Placement_Mobile" />
+                            </StackPanel>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

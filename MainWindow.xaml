@@ -10,40 +10,44 @@
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:converters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
-
-    <Grid>
+    <!-- 主内容区域 -->
+    <Grid x:Name="MainContent" Visibility="Visible">
+        <!-- 自定义标题栏 -->
         <Grid x:Name="AppTitleBar"
-              Height="48"
-              Margin="48,0,0,0"
-              VerticalAlignment="Top"
-              Padding="0">
+                  Height="48"
+                  Margin="48,0,0,0"
+                  VerticalAlignment="Top"
+                  Padding="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+
             <Image x:Name="TitleBarIcon" 
-                   Source="Assets/Logo/StoreLogo.png"
-                   Width="16"
-                   Height="16"
-                   HorizontalAlignment="Left"
-                   VerticalAlignment="Center"/>
+                       Source="Assets/Logo/StoreLogo.png"
+                       Width="16"
+                       Height="16"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"/>
+
             <TextBlock x:Name="TitleBarTextBlock"
-                       Text="{StaticResource AppTitle}" 
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       VerticalAlignment="Center"
-                       Margin="12,0,0,0"
-                       Grid.Column="1"/>
+                           Text="{StaticResource AppTitle}" 
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"
+                           Grid.Column="1"/>
         </Grid>
 
+        <!-- 导航视图 -->
         <NavigationView x:Name="NavView"
-                        IsSettingsVisible="True"
-                        IsBackButtonVisible="Collapsed"
-                        PaneDisplayMode="Auto"
-                        Grid.Row="1"
-                        IsTitleBarAutoPaddingEnabled="False"
-                        IsTabStop="False" 
-                        SelectionChanged="NavView_SelectionChanged"
-                        Loaded="NavView_Loaded">
+                            Header="{x:Bind NavView.Header, Mode=OneWay}"
+                            IsSettingsVisible="True"
+                            IsBackButtonVisible="Collapsed"
+                            PaneDisplayMode="Auto"
+                            Grid.Row="1"
+                            IsTitleBarAutoPaddingEnabled="False"
+                            IsTabStop="False" 
+                            SelectionChanged="NavView_SelectionChanged">
 
             <NavigationView.HeaderTemplate>
                 <DataTemplate>
@@ -53,25 +57,30 @@
                             <ColumnDefinition/>
                         </Grid.ColumnDefinitions>
                         <Grid x:Name="pageTitle"
-                              Background="Transparent"
-                              Height="44"
-                              VerticalAlignment="Top">
+                                  Background="Transparent"
+                                  Height="44"
+                                  VerticalAlignment="Top">
                             <TextBlock x:Name="title" 
-                                       Style="{StaticResource TitleTextBlockStyle}"
-                                       FontSize="24"
-                                       VerticalAlignment="Center"
-                                       Text="{Binding}"/>
+                                           Style="{StaticResource TitleTextBlockStyle}"
+                                           FontSize="24"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding}"/>
                         </Grid>
                     </Grid>
                 </DataTemplate>
             </NavigationView.HeaderTemplate>
+
+            <!-- 导航菜单项 -->
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="{StaticResource SmallSixRenPageHeader}" Tag="HexagramPlacementWin.Pages.SmallSixRen">
+                <NavigationViewItem Content="{StaticResource SmallSixRenPageHeader}" 
+                                        Tag="HexagramPlacementWin.Pages.SmallSixRen">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE80A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
+
+            <!-- 内容框架 -->
             <Frame x:Name="ContentFrame" Navigated="ContentFrame_Navigated"/>
         </NavigationView>
     </Grid>

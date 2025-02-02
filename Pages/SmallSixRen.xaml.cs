@@ -2,374 +2,437 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using YiJingFramework.Nongli.Lunar;
-using YiJingFramework.EntityRelations.EntityStrings.Extensions;
 using YiJingFramework.PrimitiveTypes;
-using YiJingFramework.EntityRelations.EntityStrings.Conversions;
-using YiJingFramework.EntityRelations.WuxingRelations;
 using YiJingFramework.EntityRelations.WuxingRelations.Extensions;
 using YiJingFramework.EntityRelations.EntityCharacteristics.Extensions;
-using System.Diagnostics;
+using System.Text.RegularExpressions;
+using YiJingFramework.EntityRelations.EntityStrings.Conversions;
+using YiJingFramework.EntityRelations.WuxingRelations;
+using YiJingFramework.EntityRelations.EntityStrings.Extensions;
 
 namespace HexagramPlacementWin.Pages
 {
     public sealed partial class SmallSixRen : Page
     {
-        private Brush originalBorderBrush;
-        private DispatcherTimer _timer;
-        private bool useCustomTime;
-        private bool isValid = true;
-        private bool isCalculated;
-        private DateTime customDateTime;
+        private Brush? _originalBorderBrush; // 保存原始的边框颜色
+        private DispatcherTimer? _timer; // 用于定时更新时间的计时器
+        private DateTime _customDateTime; // 自定义时间
+        private bool _useCustomTime; // 是否使用自定义时间
+        private bool _isCalculated; // 是否已经计算过
+        private Dizhi _lastShiDizhi; // 上一次计算的时辰地支
+        private Dizhi[] _dizhiOrder = Array.Empty<Dizhi>(); // 地支顺序数组
+        private LunarDateTime? _lunar; // 农历时间
+        private TextBox[] _textBoxes; // 用于存储月份、日期和小时的文本框
+        private string? _originalText; // 用于保存输入法组合前的文本
+        private bool _isComposing; // 标记是否处于输入法组合状态
+        private bool _isEmpty; // 标记输入是否为空
+        private bool _isZero; // 标记输入是否为零
+
+        private const string LiuqinSelf = "自身"; // 六亲中的“自身”
+        private const string LiuqinSibling = "兄弟"; // 六亲中的“兄弟”
+        private static readonly string[] Positions = { "大安", "留连", "速喜", "赤口", "小吉", "空亡" }; // 六壬中的六个位置
 
         public SmallSixRen()
         {
-            this.InitializeComponent();
-
-            InitializeControls();
-            this.Loaded += SmallSixRen_Loaded;
-            this.Unloaded += SmallSixRen_Unloaded;
-            MonthTextBox.TextChanged += TextBox_TextChanged;
-            DayTextBox.TextChanged += TextBox_TextChanged;
-            HourTextBox.TextChanged += TextBox_TextChanged;
+            InitializeComponent();
+            InitializeStyles();
+            // 初始化 TextBox 数组，包含月份、日期和小时的文本框
+            _textBoxes = new[] { MonthTextBox, DayTextBox, HourTextBox };
+            RegisterEventHandlers();
         }
 
-        private void SmallSixRen_Loaded(object sender, RoutedEventArgs e)
+        // 初始化样式，保存原始的边框颜色
+        private void InitializeStyles()
         {
-            DisplayCurrentDateTime();
+            _originalBorderBrush = MonthTextBox.BorderBrush;
+        }
+
+        // 注册事件处理器
+        private void RegisterEventHandlers()
+        {
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
+        }
+
+        // 页面加载时的事件处理
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            InitializeDateTimeDisplay();
+            TimeModeToggleSwitch.Toggled += OnTimeModeToggled;
+            PalaceModeToggleSwitch.Toggled += OnPalaceModeToggled;
+
+            // 使用循环为每个 TextBox 注册事件
+            foreach (var textBox in _textBoxes)
+            {
+                textBox.TextChanged += OnTextBoxTextChanged;
+                textBox.GotFocus += OnTextBoxGotFocus;
+                textBox.BeforeTextChanging += OnTextBoxBeforeTextChanging;
+                textBox.TextCompositionStarted += OnTextBoxTextCompositionStarted;
+                textBox.TextCompositionEnded += OnTextBoxTextCompositionEnded;
+            }
+        }
+
+        // 页面卸载时的事件处理
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            StopTimer();
+            TimeModeToggleSwitch.Toggled -= OnTimeModeToggled;
+            PalaceModeToggleSwitch.Toggled -= OnPalaceModeToggled;
+
+            // 使用循环为每个 TextBox 取消事件
+            foreach (var textBox in _textBoxes)
+            {
+                textBox.TextChanged -= OnTextBoxTextChanged;
+                textBox.GotFocus -= OnTextBoxGotFocus;
+                textBox.BeforeTextChanging -= OnTextBoxBeforeTextChanging;
+                textBox.TextCompositionStarted -= OnTextBoxTextCompositionStarted;
+                textBox.TextCompositionEnded -= OnTextBoxTextCompositionEnded;
+            }
+        }
+
+        // 初始化日期时间显示
+        private void InitializeDateTimeDisplay()
+        {
+            UpdateDateTimeDisplay();
             StartTimer();
         }
 
-        private void SmallSixRen_Unloaded(object sender, RoutedEventArgs e)
-        {
-            MonthTextBox.TextChanged -= TextBox_TextChanged;
-            DayTextBox.TextChanged -= TextBox_TextChanged;
-            HourTextBox.TextChanged -= TextBox_TextChanged;
-            StopTimer();
-        }
-
-        private void InitializeControls()
-        {
-            if (MonthTextBox != null)
-            {
-                originalBorderBrush = MonthTextBox.BorderBrush;
-            }
-        }
-
+        // 启动计时器
         private void StartTimer()
         {
-            StopTimer(); // 确保先停止之前的计时器
+            StopTimer();
 
-            _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromSeconds(1);
-            _timer.Tick += OnTimerElapsed;
+            _timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _timer.Tick += OnTimerTick;
             _timer.Start();
         }
 
+        // 停止计时器
         private void StopTimer()
         {
-            if (_timer != null)
+            if (_timer == null) return;
+
+            _timer.Stop();
+            _timer.Tick -= OnTimerTick;
+            _timer = null;
+        }
+
+        // 计时器触发时的事件处理
+        private void OnTimerTick(object? sender, object e)
+        {
+            if (!_useCustomTime)
             {
-                _timer.Stop();
-                _timer.Tick -= OnTimerElapsed;
-                _timer = null;
+                DispatcherQueue.TryEnqueue(UpdateDateTimeDisplay);
             }
         }
 
-        private void OnTimerElapsed(object sender, object e)
+        // 时间模式切换时的事件处理
+        private void OnTimeModeToggled(object sender, RoutedEventArgs e)
         {
-            if (!useCustomTime)
+            _useCustomTime = TimeModeToggleSwitch.IsOn;
+            if (_useCustomTime) StopTimer();
+            else StartTimer();
+        }
+
+        // 宫位模式切换时的事件处理
+        private void OnPalaceModeToggled(object sender, RoutedEventArgs e)
+        {
+            MonthTextBox.IsEnabled = PalaceModeToggleSwitch.IsOn;
+            if (!MonthTextBox.IsEnabled) MonthTextBox.Text = string.Empty;
+        }
+
+        // TextBox 文本变化时的事件处理
+        private void OnTextBoxTextChanged(object sender, TextChangedEventArgs e)
+        {
+            // 当 TextBox 内容发生变化时，重置 _isCalculated 为 false
+            _isCalculated = false;
+        }
+
+        // TextBox 获得焦点时的事件处理
+        private void OnTextBoxGotFocus(object sender, RoutedEventArgs e)
+        {
+            if (_isEmpty || _isZero) RestoreAllTextBoxStylesAndHideError();
+        }
+
+        // 输入法组合开始时的事件处理
+        private void OnTextBoxTextCompositionStarted(TextBox sender, TextCompositionStartedEventArgs args)
+        {
+            _isComposing = true;
+            _originalText = sender.Text; // 记录组合开始前的文本
+        }
+
+        // 输入法组合结束时的事件处理
+        private void OnTextBoxTextCompositionEnded(TextBox sender, TextCompositionEndedEventArgs args)
+        {
+            _isComposing = false;
+            // 仅处理新增的字符
+            if (sender.Text != _originalText)
             {
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    DisplayCurrentDateTime();
-                });
+                // 使用正则表达式移除所有非数字字符（仅处理新增部分）
+                string newInput = sender.Text.Replace(_originalText!, "");
+                string filteredInput = Regex.Replace(newInput, @"[^\d]", "");
+                sender.Text = _originalText + filteredInput;
             }
         }
 
-
-        private void PalaceModeToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+        // TextBox 文本变化前的事件处理
+        private void OnTextBoxBeforeTextChanging(TextBox sender, TextBoxBeforeTextChangingEventArgs args)
         {
-            if (PalaceModeToggleSwitch.IsOn && MonthTextBox != null)
+            // 允许删除操作和输入法组合中的临时字符
+            if (_isComposing || string.IsNullOrEmpty(args.NewText))
             {
-                MonthTextBox.IsEnabled = true;
-            }
-            else if (MonthTextBox != null)
-            {
-                MonthTextBox.IsEnabled = false;
-                MonthTextBox.Text = string.Empty;
-            }
-        }
-
-        private void TimeModeToggleSwitch_Toggled(object sender, RoutedEventArgs e)
-        {
-            var toggleSwitch = sender as ToggleSwitch;
-            if (toggleSwitch != null)
-            {
-                useCustomTime = toggleSwitch.IsOn;
-                if (useCustomTime)
-                {
-                    StopTimer();
-                }
-                else
-                {
-                    StartTimer();
-                }
-            }
-        }
-
-        private async void CurrentDateTimeButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (useCustomTime)
-            {
-                DateTime now = DateTime.Now;
-
-                DatePicker datePicker = new()
-                {
-                    Date = new DateTimeOffset(now.Date)
-                };
-                TimePicker timePicker = new()
-                {
-                    Time = now.TimeOfDay
-                };
-
-                ContentDialog dialog = new()
-                {
-                    Title = "选择自定义时间",
-                    XamlRoot = this.XamlRoot,
-                    Content = new StackPanel
-                    {
-                        Children =
-                        {
-                            new TextBlock { Text = "选择日期：" ,Margin=new Thickness(0,0,0,5)},
-                            datePicker,
-                            new TextBlock { Text = "选择时间：" ,Margin=new Thickness(0,10,0,5)},
-                            timePicker
-                        }
-                    },
-                    PrimaryButtonText = "确定",
-                    CloseButtonText = "取消",
-                    RequestedTheme = ((FrameworkElement)this.Content).ActualTheme // 设置对话框的主题
-                };
-
-                dialog.PrimaryButtonClick += (s, args) =>
-                {
-                    customDateTime = new DateTime(DateTime.Now.Year, datePicker.Date.Month, datePicker.Date.Day, timePicker.Time.Hours, timePicker.Time.Minutes, 0);
-                    DisplayCurrentDateTime(); // 更新显示
-                };
-
-                await dialog.ShowAsync();
-            }
-        }
-
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            TextBox textBox = sender as TextBox;
-            if (textBox != null)
-            {
-                int selectionStart = textBox.SelectionStart;
-                string originalText = textBox.Text;
-                string filteredText = FilterNonNumeric(originalText);
-
-                if (originalText != filteredText)
-                {
-                    textBox.Text = filteredText;
-                    textBox.SelectionStart = selectionStart - (originalText.Length - filteredText.Length);
-                }
-            }
-
-            if (isCalculated)
-            {
-                isCalculated = false;
-                StartTimer();
-            }
-        }
-
-        private static string FilterNonNumeric(string input)
-        {
-            return new string(input.Where(char.IsDigit).ToArray());
-        }
-
-        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isValid)
-            {
-                RestoreAllTextBoxStylesAndHideError();
-            }
-        }
-
-        private void RestoreAllTextBoxStylesAndHideError()
-        {
-            RestoreInitialTextBoxStyle(MonthTextBox);
-            RestoreInitialTextBoxStyle(DayTextBox);
-            RestoreInitialTextBoxStyle(HourTextBox);
-            ErrorMessageTextBlock.Text = string.Empty;
-            isValid = true;
-        }
-
-        private void RestoreInitialTextBoxStyle(TextBox textBox)
-        {
-            if (textBox != null)
-            {
-                textBox.BorderBrush = originalBorderBrush;
-            }
-        }
-
-        private void CalculateButton_Click(object sender, RoutedEventArgs e)
-        {
-            isValid = true; // 重置 isValid 状态
-            ErrorMessageTextBlock.Text = string.Empty;
-
-            if (PalaceModeToggleSwitch.IsOn && string.IsNullOrWhiteSpace(MonthTextBox.Text))
-            {
-                isValid = false;
-                MarkTextBoxAsInvalid(MonthTextBox);
-            }
-            else
-            {
-                RestoreInitialTextBoxStyle(MonthTextBox);
-            }
-
-            if (string.IsNullOrWhiteSpace(DayTextBox.Text))
-            {
-                isValid = false;
-                MarkTextBoxAsInvalid(DayTextBox);
-            }
-            else
-            {
-                RestoreInitialTextBoxStyle(DayTextBox);
-            }
-
-            if (string.IsNullOrWhiteSpace(HourTextBox.Text))
-            {
-                isValid = false;
-                MarkTextBoxAsInvalid(HourTextBox);
-            }
-            else
-            {
-                RestoreInitialTextBoxStyle(HourTextBox);
-            }
-
-            if (!isValid)
-            {
-                ErrorMessageTextBlock.Text = "请填写缺失项";
                 return;
             }
+            // 允许通过组合输入临时字符
+            args.Cancel = !Regex.IsMatch(args.NewText, @"^[\d\p{P}\p{S}]*$");
+        }
 
-            if (!isCalculated)
+        // 恢复所有 TextBox 的样式并隐藏错误信息
+        private void RestoreAllTextBoxStylesAndHideError()
+        {
+            MonthTextBox.BorderBrush = _originalBorderBrush;
+            DayTextBox.BorderBrush = _originalBorderBrush;
+            HourTextBox.BorderBrush = _originalBorderBrush;
+            ErrorMessageTextBlock.Text = string.Empty;
+            _isEmpty = false;
+            _isZero = false;
+        }
+
+        // 显示日期时间选择器
+        private async void ShowDateTimePicker()
+        {
+            var dateTime = DateTime.Now;
+            var datePicker = new DatePicker { Date = new DateTimeOffset(dateTime.Date) };
+            var timePicker = new TimePicker { Time = dateTime.TimeOfDay };
+
+            var dialog = new ContentDialog
             {
-                StopTimer();
-                CalculateResult();
-                isCalculated = true;
-            }
-        }
+                Title = "选择自定义时间",
+                XamlRoot = XamlRoot,
+                Content = CreatePickerPanel(datePicker, timePicker),
+                PrimaryButtonText = "确定",
+                CloseButtonText = "取消",
+                RequestedTheme = ((FrameworkElement)Content).ActualTheme
+            };
 
-        private static void MarkTextBoxAsInvalid(TextBox textBox)
-        {
-            textBox.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
-        }
-
-        private DateTime GetCurrentDateTime()
-        {
-            return useCustomTime ? customDateTime : DateTime.Now;
-        }
-
-        private static LunarDateTime GetLunarDateTime(DateTime dateTime)
-        {
-            return LunarDateTime.FromGregorian(dateTime);
-        }
-
-        private static Dizhi GetCurrentShiDizhi(LunarDateTime lunar)
-        {
-            return lunar.Shi;
-        }
-
-        private void DisplayCurrentDateTime()
-        {
-            var now = GetCurrentDateTime();
-            LunarDateTime lunar = GetLunarDateTime(now);
-
-            CurrentDateTimeButton.Content = string.Format(
-                "新历: {0:yyyy-MM-dd HH:mm:ss}\n农历: {1:C}年{2}{3}月{4}日\n时辰: {5:C}",
-                now, lunar.Nian, lunar.IsRunyue ? "闰" : "平", lunar.Yue, lunar.Ri, lunar.Shi);
-        }
-
-        private void CalculateResult()
-        {
-            LiuLianMarks.Text = string.Empty;
-            SuXiMarks.Text = string.Empty;
-            ChiKouMarks.Text = string.Empty;
-            DaAnMarks.Text = string.Empty;
-            KongWangMarks.Text = string.Empty;
-            XiaoJiMarks.Text = string.Empty;
-
-            int month = int.TryParse(MonthTextBox?.Text, out int parsedMonth) ? parsedMonth : 0;
-            int day = int.TryParse(DayTextBox?.Text, out int parsedDay) ? parsedDay : 0;
-            int hour = int.TryParse(HourTextBox?.Text, out int parsedHour) ? parsedHour : 0;
-
-            if (!PalaceModeToggleSwitch.IsOn)
+            dialog.PrimaryButtonClick += (s, args) =>
             {
-                month = 0;
+                _customDateTime = new DateTime(datePicker.Date.Year, datePicker.Date.Month,
+                    datePicker.Date.Day, timePicker.Time.Hours, timePicker.Time.Minutes, 0);
+                UpdateDateTimeDisplay();
+            };
+
+            await dialog.ShowAsync();
+        }
+
+        // 创建日期和时间选择器的面板
+        private static StackPanel CreatePickerPanel(DatePicker datePicker, TimePicker timePicker)
+        {
+            return new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = "选择日期：", Margin = new Thickness(0, 0, 0, 5) },
+                    datePicker,
+                    new TextBlock { Text = "选择时间：", Margin = new Thickness(0, 10, 0, 5) },
+                    timePicker
+                }
+            };
+        }
+
+        // 更新日期时间显示
+        private void UpdateDateTimeDisplay()
+        {
+            var currentTime = GetCurrentDateTime();
+            _lunar = LunarDateTime.FromGregorian(currentTime);
+
+            var displayText = new StringBuilder()
+                .AppendFormat("新历: {0:yyyy-MM-dd HH:mm:ss}\n", currentTime)
+                .AppendFormat("农历: {0:C}年{1}{2}月{3}日\n",
+                    _lunar.Nian,
+                    _lunar.IsRunyue ? "闰" : "平",
+                    _lunar.Yue,
+                    _lunar.Ri)
+                .AppendFormat("时辰: {0:C}", _lunar.Shi)
+                .ToString();
+
+            CurrentDateTimeButton.Content = displayText;
+        }
+
+        // 获取当前时间
+        private DateTime GetCurrentDateTime() => _useCustomTime ? _customDateTime : DateTime.Now;
+
+        // 计算六壬结果
+        private void Calculate()
+        {
+            if (_lunar is null) return; // 添加空值检查
+            if (!ValidateInputs()) return;
+
+            var steps = GetCalculationSteps();
+            var (positionsResult, shiGongIndex) = CalculatePositions(steps);
+
+            UpdateMarksDisplay(positionsResult);
+            _dizhiOrder = GenerateDizhiOrder(_lunar.Shi, shiGongIndex);
+            UpdateDizhiDisplay(_lunar.Shi, shiGongIndex);
+            UpdateLiuqinDisplay(shiGongIndex);
+
+            _isCalculated = true;
+            _lastShiDizhi = _lunar.Shi;
+        }
+
+        // 验证输入是否有效
+        private bool ValidateInputs()
+        {
+            var validationResults = new[]
+            {
+                ValidateInput(MonthTextBox, PalaceModeToggleSwitch.IsOn),
+                ValidateInput(DayTextBox),
+                ValidateInput(HourTextBox)
+            };
+
+            var hasEmpty = validationResults.Any(r => r._isEmpty);
+            var hasZero = validationResults.Any(r => r._isZero);
+
+            return HandleValidationErrors(hasEmpty, hasZero);
+        }
+
+        // 验证单个输入框的内容
+        private (bool _isEmpty, bool _isZero) ValidateInput(TextBox box, bool isRequired = true)
+        {
+            _isEmpty = isRequired && string.IsNullOrWhiteSpace(box.Text);
+            _isZero = !_isEmpty && box.Text.All(c => c == '0');
+
+            box.BorderBrush = _isEmpty || _isZero
+                ? new SolidColorBrush(Microsoft.UI.Colors.Red)
+                : _originalBorderBrush;
+
+            return (_isEmpty, _isZero);
+        }
+
+        // 处理验证错误
+        private bool HandleValidationErrors(bool hasEmpty, bool hasZero)
+        {
+            if (hasEmpty)
+            {
+                ShowError("请填写缺失项");
+                return false;
             }
 
-            int[] steps = { month, day, hour };
-            string[] positions = { "大安", "留连", "速喜", "赤口", "小吉", "空亡" };
+            if (hasZero)
+            {
+                ShowError("请填写非0数");
+                return false;
+            }
 
-            int currentIndex = 0; // 记录当前索引
-            int shiGongIndex = -1; // 初始化时宫索引
+            ClearErrors();
+            return true;
+        }
+
+        // 显示错误信息
+        private void ShowError(string message) => ErrorMessageTextBlock.Text = message;
+        // 清除错误信息
+        private void ClearErrors() => ErrorMessageTextBlock.Text = string.Empty;
+
+        // 获取计算步骤
+        private int[] GetCalculationSteps()
+        {
+            return new[]
+            {
+                PalaceModeToggleSwitch.IsOn ? ParseInput(MonthTextBox) : 0,
+                ParseInput(DayTextBox),
+                ParseInput(HourTextBox)
+            };
+        }
+
+        // 解析输入框中的内容为整数
+        private static int ParseInput(TextBox box) =>
+            int.TryParse(box.Text, out var value) ? value : 0;
+
+        // 计算六壬的位置结果
+        private static (Dictionary<string, StringBuilder> PositionsResult, int ShiGongIndex)
+            CalculatePositions(int[] steps)
+        {
+            var positionsResult = Positions.ToDictionary(
+                p => p,
+                _ => new StringBuilder());
+
+            int currentIndex = 0;
+            int shiGongIndex = -1;
 
             for (int i = 0; i < steps.Length; i++)
             {
                 if (steps[i] == 0) continue;
 
-                int stepsCount = steps[i] % 6;
-                if (stepsCount == 0) stepsCount = 6;
-                currentIndex = (currentIndex + stepsCount - 1) % 6;
+                int step = steps[i] % 6;
+                step = (step == 0) ? 6 : step;
+                currentIndex = (currentIndex + step - 1) % 6;
 
-                if (i == 2) // 记录时宫索引
-                {
-                    shiGongIndex = currentIndex;
-                }
+                if (i == 2) shiGongIndex = currentIndex;
 
-                switch (positions[currentIndex])
-                {
-                    case "大安":
-                        DaAnMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                    case "留连":
-                        LiuLianMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                    case "速喜":
-                        SuXiMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                    case "赤口":
-                        ChiKouMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                    case "小吉":
-                        XiaoJiMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                    case "空亡":
-                        KongWangMarks.Text += i == 0 ? "月" : i == 1 ? "日" : "时";
-                        break;
-                }
+                var position = Positions[currentIndex];
+                positionsResult[position].Append(GetStepPrefix(i));
             }
 
-            // 获取当前时间的地支
-            LunarDateTime lunar = GetLunarDateTime(GetCurrentDateTime());
-            Dizhi currentShiDizhi = GetCurrentShiDizhi(lunar);
+            return (positionsResult, shiGongIndex);
+        }
 
-            // 排地支
-            var dizhiOrder = GenerateDizhiOrder(currentShiDizhi, shiGongIndex);
-            DaAnDizhi.Text = dizhiOrder[0].ToString("C");
-            LiuLianDizhi.Text = dizhiOrder[1].ToString("C");
-            SuXiDizhi.Text = dizhiOrder[2].ToString("C");
-            ChiKouDizhi.Text = dizhiOrder[3].ToString("C");
-            XiaoJiDizhi.Text = dizhiOrder[4].ToString("C");
-            KongWangDizhi.Text = dizhiOrder[5].ToString("C");
+        // 获取步骤前缀
+        private static string GetStepPrefix(int stepIndex) => stepIndex switch
+        {
+            0 => "月",
+            1 => "日",
+            2 => "时",
+            _ => string.Empty
+        };
 
-            // 排六亲
-            var liuqinOrder = GenerateLiuqinOrder(dizhiOrder, currentShiDizhi, shiGongIndex);
+        // 更新六壬位置的显示
+        private void UpdateMarksDisplay(Dictionary<string, StringBuilder> positionsResult)
+        {
+            LiuLianMarks.Text = positionsResult["留连"].ToString();
+            SuXiMarks.Text = positionsResult["速喜"].ToString();
+            ChiKouMarks.Text = positionsResult["赤口"].ToString();
+            DaAnMarks.Text = positionsResult["大安"].ToString();
+            KongWangMarks.Text = positionsResult["空亡"].ToString();
+            XiaoJiMarks.Text = positionsResult["小吉"].ToString();
+        }
+
+        // 更新地支的显示
+        private void UpdateDizhiDisplay(Dizhi currentShi, int shiGongIndex)
+        {
+            DaAnDizhi.Text = _dizhiOrder[0].ToString("C");
+            LiuLianDizhi.Text = _dizhiOrder[1].ToString("C");
+            SuXiDizhi.Text = _dizhiOrder[2].ToString("C");
+            ChiKouDizhi.Text = _dizhiOrder[3].ToString("C");
+            XiaoJiDizhi.Text = _dizhiOrder[4].ToString("C");
+            KongWangDizhi.Text = _dizhiOrder[5].ToString("C");
+        }
+
+        // 生成地支顺序
+        private static Dizhi[] GenerateDizhiOrder(Dizhi currentShi, int shiGongIndex)
+        {
+            var dizhis = new Dizhi[6];
+            dizhis[shiGongIndex] = currentShi;
+
+            for (int i = 1; i < 6; i++)
+            {
+                int index = (currentShi.Index + i * 2 - 1) % 12;
+                dizhis[(shiGongIndex + i) % 6] = Dizhi.FromIndex((index + 1) % 12);
+            }
+
+            return dizhis;
+        }
+
+        // 更新六亲的显示
+        private void UpdateLiuqinDisplay(int shiGongIndex)
+        {
+            var liuqinOrder = GenerateLiuqinOrder(_dizhiOrder, shiGongIndex);
             DaAnLiuqin.Text = liuqinOrder[0];
             LiuLianLiuqin.Text = liuqinOrder[1];
             SuXiLiuqin.Text = liuqinOrder[2];
@@ -378,64 +441,58 @@ namespace HexagramPlacementWin.Pages
             KongWangLiuqin.Text = liuqinOrder[5];
         }
 
-        private static Dizhi[] GenerateDizhiOrder(Dizhi currentShiDizhi, int shiGongIndex)
+        // 生成六亲顺序
+        private static string[] GenerateLiuqinOrder(Dizhi[] dizhiOrder, int shiGongIndex)
         {
-            Dizhi[] dizhis = new Dizhi[6];
-            dizhis[shiGongIndex] = currentShiDizhi; // 时宫地支设为当前时辰地支
+            var currentShi = dizhiOrder[shiGongIndex];
+            var liuqins = new string[6];
 
-            for (int i = 1; i < 6; i++)
-            {
-                int index = (currentShiDizhi.Index + i * 2 - 1) % 12;
-                dizhis[(shiGongIndex + i) % 6] = Dizhi.FromIndex((index + 1) % 12);
-            }
-
-            return dizhis;
-        }
-
-        private static string[] GenerateLiuqinOrder(Dizhi[] dizhiOrder, Dizhi currentShiDizhi, int shiGongIndex)
-        {
-            var liuqinNames = new string[6];
             for (int i = 0; i < 6; i++)
             {
-                if (i == shiGongIndex) // 时宫所落的六亲一定是“自身”
-                {
-                    liuqinNames[i] = "自身";
-                }
-                else
-                {
-                    var wuxingRelation = GetWuxingRelation(currentShiDizhi, dizhiOrder[i]);
-                    liuqinNames[i] = wuxingRelation.ToString(WuxingRelationToStringConversions.Liuqin);
-                }
+                liuqins[i] = (i == shiGongIndex)
+                    ? LiuqinSelf
+                    : GetWuxingRelation(currentShi, dizhiOrder[i]).ToString(WuxingRelationToStringConversions.Liuqin);
             }
 
-            // 修正六亲顺序
-            FixLiuqinOrder(liuqinNames, shiGongIndex);
-
-            return liuqinNames;
+            AdjustLiuqinPosition(liuqins, shiGongIndex);
+            return liuqins;
         }
 
-        private static void FixLiuqinOrder(string[] liuqinNames, int shiGongIndex)
+        // 获取五行关系
+        private static WuxingRelation GetWuxingRelation(Dizhi current, Dizhi target)
         {
-            // 从时宫开始顺时针寻找第一个与其他宫位相同六亲的宫位，将其六亲转变为兄弟
-            for (int i = 1; i < 3; i++) // 实际排盘中，兄弟一般都在自身所落的下一宫或下两宫，所以只检查这两个位置
+            return current.Wuxing().GetRelation(target.Wuxing());
+        }
+
+        // 调整六亲位置
+        private static void AdjustLiuqinPosition(IList<string> liuqins, int shiGongIndex)
+        {
+            for (int i = 1; i <= 2; i++)
             {
-                int currentIndex = (shiGongIndex + i) % liuqinNames.Length;
-                for (int j = 0; j < liuqinNames.Length; j++)
+                int index = (shiGongIndex + i) % liuqins.Count;
+                if (liuqins.Any(l => l == liuqins[index] && l != LiuqinSelf))
                 {
-                    if (j != currentIndex && liuqinNames[currentIndex] == liuqinNames[j])
-                    {
-                        liuqinNames[currentIndex] = "兄弟";
-                        return;
-                    }
+                    liuqins[index] = LiuqinSibling;
+                    return;
                 }
             }
         }
 
-
-        private static WuxingRelation GetWuxingRelation(Dizhi dizhi, Dizhi currentShiDizhi)
+        // 日期时间按钮点击事件处理
+        private void OnDateTimeButtonClick(object sender, RoutedEventArgs e)
         {
-            var relation = dizhi.Wuxing().GetRelation(currentShiDizhi.Wuxing());
-            return relation;
+            if (_useCustomTime) ShowDateTimePicker();
+        }
+
+        // 计算按钮点击事件处理
+        private void OnCalculateClick(object sender, RoutedEventArgs e)
+        {
+            _isCalculated = _lunar!.Shi.Equals(_lastShiDizhi) ? true : false;
+            if (!_isCalculated)
+            {
+                StopTimer();
+                Calculate();
+            }
         }
     }
 }

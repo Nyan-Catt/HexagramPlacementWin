@@ -5,16 +5,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HexagramPlacementWin"
     xmlns:pages="using:HexagramPlacementWin.Pages">
+
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="ms-appx:///Resources/Strings.zh-CN.xaml"/>
-                <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
-            <SolidColorBrush x:Key="WindowCaptionBackground">Transparent</SolidColorBrush>
-            <SolidColorBrush x:Key="WindowCaptionBackgroundDisabled">Transparent</SolidColorBrush>
+
+            <!-- 统一布局常量 -->
+            <x:Double x:Key="TitleBarHeight">48</x:Double>
+            <Thickness x:Key="TitleBarMargin">48,0,0,0</Thickness>
             <Thickness x:Key="NavigationViewContentMargin">0,48,0,0</Thickness>
         </ResourceDictionary>
     </Application.Resources>

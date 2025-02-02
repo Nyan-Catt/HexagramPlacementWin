@@ -7,7 +7,6 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-      xmlns:ui="using:CommunityToolkit.WinUI"
       mc:Ignorable="d">
 
     <Page.Resources>
@@ -25,87 +24,56 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
-        <!--  Spacing between cards  -->
         <x:Double x:Key="SettingsCardSpacing">4</x:Double>
 
-        <!--  Style (inc. the correct spacing) of a section header  -->
         <Style x:Key="SettingsSectionHeaderTextBlockStyle"
                BasedOn="{StaticResource BodyStrongTextBlockStyle}"
                TargetType="TextBlock">
-            <Style.Setters>
-                <Setter Property="Margin" Value="1,30,0,6" />
-            </Style.Setters>
-        </Style>
-
-        <!-- New style for TextBlock displaying month, day, hour in bottom left-->
-        <Style x:Key="BottomLeftTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="-24,24,0,-32"/>
-        </Style>
-
-        <Style x:Key="BottomTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="0,24,0,-32"/>
-        </Style>
-
-        <Style x:Key="BottomRightTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Margin" Value="0,24,-24,-32"/>
+            <Setter Property="Margin" Value="1,30,0,6"/>
         </Style>
     </Page.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock
-            x:Name="PageHeader"
-            Margin="36,24,36,0"
-            Style="{ThemeResource TitleTextBlockStyle}"
-            Text="小六壬" />
-        <ScrollViewer
-            x:Name="contentSV"
-            Grid.Row="1"
-            Padding="36,0,36,0"
-            IsTabStop="False"
-            UseSystemFocusVisuals="False"
-            VerticalScrollBarVisibility="Auto"
-            VerticalScrollMode="Auto">
-            <StackPanel 
-                        HorizontalAlignment="Stretch"
-                        Spacing="{ThemeResource SettingsCardSpacing}">
 
-                <!-- Section: 排盘设置 -->
-                <TextBlock Text="排盘设置" Style="{ThemeResource SettingsSectionHeaderTextBlockStyle}" />
+        <ScrollViewer x:Name="contentSV"
+                      Grid.Row="1"
+                      Padding="36,0,36,0"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="{ThemeResource SettingsCardSpacing}">
+
+                <!-- 排盘设置 -->
+                <TextBlock Text="排盘设置" Style="{ThemeResource SettingsSectionHeaderTextBlockStyle}"/>
                 <controls:SettingsCard Description="选择三宫或两宫模式" Header="排盘模式">
                     <controls:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE771;" />
+                        <FontIcon Glyph="&#xE771;"/>
                     </controls:SettingsCard.HeaderIcon>
-                    <ToggleSwitch x:Name="PalaceModeToggleSwitch" OffContent="两宫" OnContent="三宫" IsOn="True" Toggled="PalaceModeToggleSwitch_Toggled"/>
+                    <ToggleSwitch x:Name="PalaceModeToggleSwitch" OffContent="两宫" OnContent="三宫" IsOn="True"/>
                 </controls:SettingsCard>
 
                 <controls:SettingsCard Description="选择使用当前时间或自定义时间" Header="时间设置">
                     <controls:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE823;" />
+                        <FontIcon Glyph="&#xE823;"/>
                     </controls:SettingsCard.HeaderIcon>
-                    <ToggleSwitch x:Name="TimeModeToggleSwitch" OffContent="当前时间" OnContent="自定义时间" IsOn="False" Toggled="TimeModeToggleSwitch_Toggled"/>
+                    <ToggleSwitch x:Name="TimeModeToggleSwitch" OffContent="当前时间" OnContent="自定义时间" IsOn="False"/>
                 </controls:SettingsCard>
 
-                <!-- 第一行：TextBox 和 Button -->
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,8">
-                    <TextBox x:Name="MonthTextBox" PlaceholderText="月" InputScope="Number" Width="80" Height="32" Margin="0,0,4,0" TextChanged="TextBox_TextChanged" GotFocus="TextBox_GotFocus"/>
-                    <TextBox x:Name="DayTextBox" PlaceholderText="日" InputScope="Number" Width="80" Height="32" Margin="0,0,4,0" TextChanged="TextBox_TextChanged" GotFocus="TextBox_GotFocus"/>
-                    <TextBox x:Name="HourTextBox" PlaceholderText="时" InputScope="Number" Width="80" Height="32" Margin="0,0,4,0" TextChanged="TextBox_TextChanged" GotFocus="TextBox_GotFocus"/>
-                    <Button Content="排盘" Click="CalculateButton_Click"/>
-                    <TextBlock x:Name="ErrorMessageTextBlock" Foreground="Red" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
-                    <Button x:Name="CurrentDateTimeButton" HorizontalAlignment="Right" Click="CurrentDateTimeButton_Click" VerticalAlignment="Center"/>
-                </StackPanel>
+                <!-- 输入区域 -->
+                <Grid Margin="0,10,0,8">
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,8">
+                        <TextBox x:Name="MonthTextBox" PlaceholderText="月" Width="80" Height="32" Margin="1,0,4,0"/>
+                        <TextBox x:Name="DayTextBox" PlaceholderText="日" Width="80" Height="32" Margin="1,0,4,0"/>
+                        <TextBox x:Name="HourTextBox" PlaceholderText="时" Width="80" Height="32" Margin="1,0,4,0"/>
+                        <Button Content="排盘" Click="OnCalculateClick" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="ErrorMessageTextBlock" Foreground="Red" Margin="4,0,0,0"/>
+                    </StackPanel>
+                    <Button x:Name="CurrentDateTimeButton" HorizontalAlignment="Right" Click="OnDateTimeButtonClick" Margin="0,0,2,0"/>
+                </Grid>
 
-                <!-- 第四行：排盘结果表格 -->
+                <!-- 排盘结果 -->
                 <Grid x:Name="ResultGrid" Margin="0,0,0,10">
                     <Grid.RowDefinitions>
                         <RowDefinition/>
@@ -116,89 +84,131 @@
                         <ColumnDefinition/>
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
-                    <!-- 定义每个宫位 -->
-                    <Border Grid.Row="0" Grid.Column="0" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 统一宫位模板 -->
+                    <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="LiuLianEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="LiuLian" Grid.Row="1" Text="留连" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="LiuLianMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="LiuLianDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="LiuLianLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="LiuLian" Text="留连"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="LiuLianMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="LiuLianDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="LiuLianLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="0" Grid.Column="1" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 重复结构简化为统一模板 -->
+                    <!-- 速喜 -->
+                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="SuXiEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="SuXi" Grid.Row="1" Text="速喜" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="SuXiMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="SuXiDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="SuXiLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="SuXi" Text="速喜"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="SuXiMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="SuXiDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="SuXiLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="0" Grid.Column="2" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 赤口 -->
+                    <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="ChiKouEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="ChiKou" Grid.Row="1" Text="赤口" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="ChiKouMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="ChiKouDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="ChiKouLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="ChiKou" Text="赤口"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="ChiKouMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="ChiKouDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="ChiKouLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="1" Grid.Column="0" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 大安 -->
+                    <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="DaAnEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="DaAn" Grid.Row="1" Text="大安" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="DaAnMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="DaAnDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="DaAnLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="DaAn" Text="大安"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="DaAnMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="DaAnDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="DaAnLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="1" Grid.Column="1" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 空亡 -->
+                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="KongWangEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="KongWang" Grid.Row="1" Text="空亡" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="KongWangMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="KongWangDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="KongWangLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="KongWang" Text="空亡"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="KongWangMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="KongWangDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="KongWangLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="1" Grid.Column="2" Style="{ThemeResource FluentBorderStyle}">
+
+                    <!-- 小吉 -->
+                    <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource FluentBorderStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock x:Name="XiaoJiEmpty" Grid.Row="0"/>
-                            <TextBlock x:Name="XiaoJi" Grid.Row="1" Text="小吉" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="XiaoJiMarks" Grid.Row="2" Style="{ThemeResource BottomLeftTextBlockStyle}"/>
-                            <TextBlock x:Name="XiaoJiDizhi" Grid.Row="2" Style="{ThemeResource BottomTextBlockStyle}"/>
-                            <TextBlock x:Name="XiaoJiLiuqin" Grid.Row="2" Style="{ThemeResource BottomRightTextBlockStyle}"/>
+                            <TextBlock x:Name="XiaoJi" Text="小吉"/>
+                            <Grid Grid.Row="1" Margin="0,24,0,-32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="XiaoJiMarks" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="XiaoJiDizhi" Grid.Column="1"/>
+                                <TextBlock x:Name="XiaoJiLiuqin" Grid.Column="2" HorizontalAlignment="Right"/>
+                            </Grid>
                         </Grid>
                     </Border>
                 </Grid>

@@ -1,90 +1,77 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using Microsoft.UI.Windowing;
 
 namespace HexagramPlacementWin
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
+    // 应用程序类，继承自 Application
     public partial class App : Application
     {
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        // 构造函数，初始化应用程序组件
         public App()
         {
-            this.InitializeComponent();
-        }
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-        {
-            var window = new MainWindow();
-            window.Activate();
-            ApplySavedTheme(); // 确保主题正确应用
+            InitializeComponent();
         }
 
+        // 应用程序启动时触发的事件，初始化窗口并激活
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
+        {
+            // 创建主窗口实例
+            var window = new MainWindow();
+            window.Activate();  // 激活并显示主窗口
+            ApplySavedTheme();  // 应用已保存的主题设置
+        }
+
+        // 从本地设置中获取并应用保存的主题
         private static void ApplySavedTheme()
         {
+            // 获取应用的本地设置
             var localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
-            if (localSettings.Values.TryGetValue("AppTheme", out var savedTheme))
-            {
-                SetTheme(savedTheme?.ToString() ?? "Default");
 
+            // 尝试获取保存的主题值，如果存在，则应用该主题
+            if (localSettings.Values.TryGetValue("AppTheme", out object? savedTheme))
+            {
+                SetTheme(savedTheme.ToString());  // 设置应用程序主题
             }
         }
 
-        public static void SetTheme(string theme)
+        // 设置应用程序主题，根据传入的主题字符串应用主题
+        public static void SetTheme(string? theme)
         {
-            if (theme == null)
-                throw new ArgumentNullException(nameof(theme));
-            if (MainWindow.CurrentWindow != null)
+            // 获取当前窗口的根元素（FrameworkElement）
+            if (MainWindow.CurrentWindow?.Content is FrameworkElement rootElement)
             {
-                var rootElement = MainWindow.CurrentWindow.Content as FrameworkElement;
-                var mainWindow = MainWindow.CurrentWindow;
-                var appWindow = mainWindow.GetAppWindowForCurrentWindow();
-                var titleBar = appWindow.TitleBar;
-                if (rootElement != null)
-                {
-                    switch (theme)
-                    {
-                        case "Light":
-                            rootElement.RequestedTheme = ElementTheme.Light;
-                            titleBar.ButtonForegroundColor = Microsoft.UI.Colors.Black;
-                            break;
-                        case "Dark":
-                            rootElement.RequestedTheme = ElementTheme.Dark;
-                            titleBar.ButtonForegroundColor = Microsoft.UI.Colors.White;
-                            break;
-                        case "Default":
-                            rootElement.RequestedTheme = ElementTheme.Default;
-                            if (rootElement.RequestedTheme == ElementTheme.Dark)
-                            {
-                                titleBar.ButtonForegroundColor = Microsoft.UI.Colors.White;
-                            }
-                            break;
-                    }
-                }
+                // 根据传入的主题字符串解析并设置应用程序的主题
+                rootElement.RequestedTheme = ParseTheme(theme ?? "Default");
+
+                // 更新标题栏颜色，以匹配当前的主题
+                UpdateTitleBarColor(MainWindow.CurrentWindow, rootElement.ActualTheme);
             }
         }
 
-        private Window? m_window;
+        // 解析主题字符串并返回相应的 ElementTheme 枚举值
+        private static ElementTheme ParseTheme(string theme) => theme switch
+        {
+            "Light" => ElementTheme.Light,  // 如果主题为 "Light"，返回 Light 主题
+            "Dark" => ElementTheme.Dark,    // 如果主题为 "Dark"，返回 Dark 主题
+            _ => ElementTheme.Default       // 默认主题
+        };
+
+        // 更新标题栏颜色，确保标题栏颜色与应用程序的主题一致
+        private static void UpdateTitleBarColor(MainWindow mainWindow, ElementTheme actualTheme)
+        {
+            // 获取当前窗口的标题栏
+            var titleBar = mainWindow.GetAppWindowForCurrentWindow().TitleBar;
+
+            // 根据实际的主题设置标题栏按钮的前景色
+            titleBar.ButtonForegroundColor = actualTheme switch
+            {
+                ElementTheme.Dark => Microsoft.UI.Colors.White,  // 如果是 Dark 主题，按钮前景色为白色
+                ElementTheme.Light => Microsoft.UI.Colors.Black, // 如果是 Light 主题，按钮前景色为黑色
+                _ => Application.Current.RequestedTheme == ApplicationTheme.Dark
+                    ? Microsoft.UI.Colors.White  // 如果是应用程序的暗黑模式，按钮前景色为白色
+                    : Microsoft.UI.Colors.Black  // 否则按钮前景色为黑色
+            };
+        }
     }
 }
